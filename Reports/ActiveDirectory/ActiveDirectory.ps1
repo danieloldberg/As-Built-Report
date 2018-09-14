@@ -45,44 +45,30 @@ if (!$StyleName) {
 #---------------------------------------------------------------------------------------------#
 
 foreach ($Forest in $Target) {
+
+    $ForestObject = Get-ADForest -Identity $Forest -Credential $Credentials
     
     Section -Style Heading1 "Forest Summary" {
         
         if ($InfoLevel.Forest -ge 1) {
 
-        $ForestObject = Get-ADForest -Identity $Forest -Credential $Credentials
-
             Paragraph "Active Directory has a forest name $Forest. Following table contains forest summary with important information:"
             
             Section -Style Heading2 "FSMO Servers" {
-
                 Paragraph "Following table contains FSMO servers"
-
                 $ForestObject | Select-Object SchemaMaster,DomainNamingMaster | Table -Name "FSMO Roles" -List
-
             }
 
             Section -Style Heading2 "Optional Forest Features" {
-
                 Paragraph "Following table contains optional forest features"
-
-                
-
             }
 
             Section -Style Heading2 "UPN Suffixes" {
-
                 Paragraph "Following UPN suffixes were created in this forest:"
-
-                
-
             }
 
-
-
-            
-
         }
+
     }
 
     Section -Style Heading1 "Forest Sites" {
@@ -107,7 +93,9 @@ foreach ($Forest in $Target) {
 
             Section -Style Heading2 "Domain - $Domain - Domain Controllers" {
 
+                $DomainDCs = Get-ADGroupMember 'Domain Controllers' -Credential $Credentials -Server $Domain | Get-ADDomainController
 
+                $DomainDCs | Select-Object -Property HostName,@{Name="Read Only DC";Expression={$_."IsReadOnly"}},@{Name="Global Catalog";Expression={$_."IsGlobalCatalog"}},IPv4Address,OperatingSystem,Site | Table -Name "$Domain Domain Controllers"
 
             }
 
@@ -138,65 +126,65 @@ foreach ($Forest in $Target) {
                 Catch{
                     Write-Verbose "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain"
                     Paragraph "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain" -Color Red
-                    Continue
+                    Return
                 }
-
+                
                 
             }
                 
-
-            }
 
             Section -Style Heading2 "Domain - $Domain - Group Policies Details" {
-                
-                
-
+            
             }
 
             Section -Style Heading2 "Domain - $Domain - Group Policies ACL" {
-                
-                
-
+            
             }
 
             Section -Style Heading2 "Domain - $Domain - DNS A/SRV Records" {
-                
-                
-
+        
             }
 
             Section -Style Heading2 "Domain - $Domain - Trusts" {
                 
-                
-
             }
 
             Section -Style Heading2 "Domain - $Domain - Organizational Units" {
                 
+                Paragraph "Following table contains all OU's created in $Domain"
                 
+                $DomainOUs = Get-ADOrganizationalUnit -Server $Domain -Credential $creds -Properties * -filter *
 
+                $DomainOUs | Select-Object CanonicalName,ManagedBy,@{Name="Protected";Expression={$_."ProtectedFromAccidentalDeletion"}},Created | Table -Name "$Domain Organizational Units"
+            
             }
 
             Section -Style Heading2 "Domain - $Domain - Domain Administrators" {
                 
+                Paragraph "Following users have highest priviliges and are able to control a lot of Windows resources."
                 
+                $EnterpriseAdmins = Get-ADGroupMember 'Domain Admins' -Credential $Credentials -Server $Domain | Get-ADUser
+
+                $EnterpriseAdmins | Select-Object Enabled, Name, SamAccountName, UserPrincipalName | Table -Name "$Domain Domain Admins" -List
 
             }
 
             Section -Style Heading2 "Domain - $Domain - Enterprise Administrators" {
                 
+                Paragraph "Following users have highest priviliges across Forest and are able to control a lot of Windows resources."
                 
+                $EnterpriseAdmins = Get-ADGroupMember 'Enterprise Admins' -Credential $Credentials -Server $Domain | Get-ADUser
+
+                $EnterpriseAdmins | Select-Object Enabled, Name, SamAccountName, UserPrincipalName | Table -Name "$Domain Enterprise Admins" -List
 
             }
 
             Section -Style Heading2 "Domain - $Domain - Users Count" {
                 
-                
-
             }
 
             Section -Style Heading2 "Domain - $Domain - GPP Drive Maps" {
-                
+                <#
                 # If we were able to retrieve domain GPO objects
                 If($DomainGPOs){
                     
@@ -225,8 +213,10 @@ foreach ($Forest in $Target) {
                                 }
                             }
                         }
+                        
 
                     }
+                    
 
                 }
                 # If Domain GPOs were unable to be retrieved.
@@ -236,16 +226,15 @@ foreach ($Forest in $Target) {
                     Paragraph "Unable to collect GPP Drive Maps for $domain. This is probably due to not being able to retrieve GPO objects" -Color Red
 
                 }
+                
+                #>
 
             }
+            
 
-
-
-
-
-
-        
         }
+        
+    }
     
 }
 
