@@ -25,7 +25,6 @@
 #                                    CONFIG SETTINGS                                          #
 #---------------------------------------------------------------------------------------------#
 # Clear variables
-$DomainControllers = @()
 
 # If custom style not set, use VMware style
 if (!$StyleName) {
@@ -70,14 +69,14 @@ foreach ($Forest in $Target) {
                 Paragraph "Following table contains optional forest features"
                 $ForestOptionalFeatureObject = Get-ADOptionalFeature -Filter * -Server $Forest -Credential $Credentials
                 # Check if Recycle bin is enabled
-                If(($ForestOptionalFeatureObject | Where{$_.Name -like "*Recycle Bin Feature*"}).EnabledScopes){
+                If(($ForestOptionalFeatureObject | Where-Object{$_.Name -like "*Recycle Bin Feature*"}).EnabledScopes){
                     $RecycleBinStatus = $True
                 }
                 Else {
                     $RecycleBinStatus = $False
                 }
                 # Check if Privileged Access Management Feature is enabled
-                If(($ForestOptionalFeatureObject | Where{$_.Name -like "*Privileged Access Management Feature*"}).EnabledScopes){
+                If(($ForestOptionalFeatureObject | Where-Object{$_.Name -like "*Privileged Access Management Feature*"}).EnabledScopes){
                     $PAMStatus = $True
                 }
                 Else {
@@ -107,15 +106,21 @@ foreach ($Forest in $Target) {
     }
 
     Section -Style Heading1 "Forest Sites" {
-
+        Get-ADReplicationSite -Credential $Credentials -Server $Forest -Properties * |
+            Select-Object Name,Description,Created,Modified,@{Name="Protected";Expression={$_."ProtectedFromAccidentalDeletion"}} |
+            Table -Name "Forest Sites"
     }
 
     Section -Style Heading1 "Forest Subnets" {
-
+        Get-ADReplicationSubnet -Credential $Credentials -Filter * -Server $Forest -Properties * |
+            Select-Object Name,Description,Created,Modified |
+            Table -Name "Forest Subnets"
     }
 
     Section -Style Heading1 "Forest Site Links" {
-
+        Get-ADReplicationSiteLink -Credential $Credentials -Filter * -Server $Forest -Properties * |
+            Select-Object Name,Cost,@{Name="Replication Frequency in Minutes";Expression={$_."ReplicationFrequencyInMinutes"}},ReplInterval,Created,Modified,@{Name="Protected";Expression={$_."ProtectedFromAccidentalDeletion"}} |
+            Table -Name "Forest Site Links"
     }
 
     # Loop all domains in forest 
@@ -152,13 +157,29 @@ foreach ($Forest in $Target) {
 
             Section -Style Heading2 "Password Policies" {
                 
-                # Get-ADDefaultDomainPasswordPolicy
-
+                Get-ADDefaultDomainPasswordPolicy -Credential $Credentials -Server $Domain |
+                    Select-Object `
+                    @{Name="Complexity Enabled";Expression={$_."ComplexityEnabled"}},
+                    @{Name="Lockout Duration";Expression={$_."LockoutDuration"}},
+                    @{Name="Lockout Observation Window";Expression={$_."LockoutObservationWindow"}},
+                    @{Name="Lockout Threshold";Expression={$_."LockoutThreshold"}},
+                    @{Name="Max Password Age";Expression={$_."MaxPasswordAge"}},
+                    @{Name="Min Password Age";Expression={$_."MinPasswordAge"}},
+                    @{Name="Min Password Length";Expression={$_."MinPasswordLength"}},
+                    @{Name="Password History Count";Expression={$_."PasswordHistoryCount"}},
+                    @{Name="Reversible Encryption Enabled";Expression={$_."ReversibleEncryptionEnabled"}} |
+                    Table -Name "$Domain Password Policies" -List
             }
 
             Section -Style Heading2 "Fine Grained Password Policies" {
-                
-                # Get-ADFineGrainedPasswordPolicy
+                Paragraph "Following section should cover fine grained password policies."
+                $DomainFGPasswordPolicy = Get-ADFineGrainedPasswordPolicy -Credential $Credentials -Server $Domain -Filter *
+                If($DomainFGPasswordPolicy){
+                    $DomainFGPasswordPolicy | Table -Name "$Domain Fine Grained Password Policies" -List
+                }
+                Else{
+                    Paragraph "There were no fine grained password polices defined in $Domain. There was no formal requirement to have them set up."
+                }
 
             }
 
@@ -167,7 +188,7 @@ foreach ($Forest in $Target) {
                 Try{
                     $DomainGPOs = Get-GPO -domain $Domain -All -ErrorAction Stop
 
-                    $DomainGPOs | Select-Object DisplayName,GpoStatus,Description,CreationTime |Table -Name "$Domain Group Policies"
+                    $DomainGPOs | Select-Object DisplayName,GpoStatus,Description,CreationTime,ModificationTime |Table -Name "$Domain Group Policies"
 
                 }
                 Catch{
@@ -176,24 +197,52 @@ foreach ($Forest in $Target) {
                     Return
                 }
                 
-                
             }
                 
 
             Section -Style Heading2 "Group Policies Details" {
-            
+                
             }
 
             Section -Style Heading2 "Group Policies ACL" {
             
             }
 
-            Section -Style Heading2 "DNS A/SRV Records" {
-        
+            Section -Style Heading2 "DNS Zones - A/SRV Records" {
+                Paragraph "Following section covers all DNS zones in all domain controllers in $Domain"
+                $DomainDCs = Get-ADGroupMember 'Domain Controllers' -Credential $Credentials -Server $Domain | Get-ADDomainController
+                #Try{
+                    ForEach($DomainDC in $DomainDCs){
+                        Paragraph $DomainDC.Hostname
+                        $DCDnsZones = Get-DnsServerZone -ComputerName $DomainDC.HostName -ErrorAction Stop
+
+                        ForEach($DnsZone in $DCDnsZones){
+
+                            Section -Style Heading3 ($DomainDC.Name + "\" + $DnsZone.ZoneName) {
+                                <#$DCDnsZone | Select-Object ZoneType,DynamicUpdate,ReplicationScope,IsDsIntegrated,IsReadOnly,IsReverseLookupZone,SecureSecondaries,MasterServers |
+                                Table -Name ($DomainDC.Name + "\" + $DCDnsZone.ZoneName) -List#>
+
+                                Get-DnsServerResourceRecord -ComputerName $DomainDC.HostName -ZoneName $DnsZone.ZoneName -ErrorAction Stop |
+                                Select-Object HostName,RecordType,RecordData,TimeToLive,Timestamp |
+                                Table -Name ($DnsZone.ZoneName + " Records") -ErrorAction SilentlyContinue
+
+                            }
+
+                        }
+
+                    }
+                <#}
+                Catch{
+                    Write-Verbose "Unable to collect Dns Zone information from domain controllers in $Domain. This is probably due to missing permissions or client machine in another domain"
+                    Paragraph "Unable to collect Dns Zone information from domain controllers in $Domain. This is probably due to missing permissions or client machine in another domain" -Color Red
+                    Return
+                }#>
+
             }
 
             Section -Style Heading2 "Trusts" {
-                
+                Get-ADTrust -Filter * -Credential $Credentials -Server $Domain |
+                    Table -Name "Domain Trusts" -ErrorAction SilentlyContinue
             }
 
             Section -Style Heading2 "Organizational Units" {
@@ -222,11 +271,11 @@ foreach ($Forest in $Target) {
                     "Users Count"                           = $PAMStatus
                     "Users Expired"                         = $(Search-ADAccount -AccountExpired -Credential $Credentials -Server $Domain).Count
                     "Users Expired Incl. Disabled"          = $PAMStatus
-                    "Users Never Expiring"                  = $($UserObject | Where{$_.PasswordNeverExpires -eq $True}).Count
+                    "Users Never Expiring"                  = $($UserObject | Where-Object{$_.PasswordNeverExpires -eq $True}).Count
                     "Users Never Expiring Incl. Disabled"   = $PAMStatus
                     "Users System Accounts"                 = $PAMStatus
-
                 }
+
                 <#
                 Users Count Incl. System	36
                 Users Count	33
@@ -242,8 +291,9 @@ foreach ($Forest in $Target) {
             Section -Style Heading2 "GPP Drive Maps" {
                 
                 # If we were able to retrieve domain GPO objects
-                If($DomainGPOs -ne $Null){
-                    
+                Try{
+                    $DomainGPOs = Get-GPO -domain $Domain -All -ErrorAction Stop
+                    $DomainDriveMaps = @();
                     # Thanks to Johan Dahlbom @ https://365lab.net/2013/12/31/getting-all-gpp-drive-maps-in-a-domain-with-powershell/
                     foreach ($Policy in $DomainGPOs){
             
@@ -255,40 +305,37 @@ foreach ($Forest in $Target) {
                         {
                             [xml]$DriveXML = Get-Content "\\$($GPODom)\SYSVOL\$($GPODom)\Policies\{$($GPOID)}\User\Preferences\Drives\Drives.xml"
         
-                            foreach ( $drivemap in $DriveXML.Drives.Drive )
-
-                            {
-                                New-Object PSObject -Property @{
-                                GPOName = $GPODisp
-                                DriveLetter = $drivemap.Properties.Letter + ":"
-                                DrivePath = $drivemap.Properties.Path
-                                DriveAction = $drivemap.Properties.action.Replace("U","Update").Replace("C","Create").Replace("D","Delete").Replace("R","Replace")
-                                DriveLabel = $drivemap.Properties.label
-                                DrivePersistent = $drivemap.Properties.persistent.Replace("0","False").Replace("1","True")
-                                DriveFilterGroup = $drivemap.Filters.FilterGroup.Name
+                            foreach ( $drivemap in $DriveXML.Drives.Drive ){
+                                $DomainDriveMaps += New-Object PSObject -Property @{
+                                    GPOName = $GPODisp
+                                    DriveLetter = $drivemap.Properties.Letter + ":"
+                                    DrivePath = $drivemap.Properties.Path
+                                    DriveAction = $drivemap.Properties.action.Replace("U","Update").Replace("C","Create").Replace("D","Delete").Replace("R","Replace")
+                                    DriveLabel = $drivemap.Properties.label
+                                    DrivePersistent = $drivemap.Properties.persistent.Replace("0","False").Replace("1","True")
+                                    DriveFilterGroup = $drivemap.Filters.FilterGroup.Name
                                 }
                             }
                         }
                         
                     }
-                    
+                    $DomainDriveMaps | Select-Object DrivePath,DriveAction,DriveLetter,DriveLabel,DrivePersistent,GPOName |
+                        Table -Name "$Domain Drive Maps"
                 }
-                # If Domain GPOs were unable to be retrieved.
-                Else{
-
-                    Write-Verbose "Unable to collect GPP Drive Maps for $domain. This is probably due to not being able to retrieve GPO objects"
-                    Paragraph "Unable to collect GPP Drive Maps for $domain. This is probably due to not being able to retrieve GPO objects" -Color Red
-
+                Catch{
+                    Write-Verbose "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain"
+                    Paragraph "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain" -Color Red
+                    Return
                 }
                 
             }
             
             Section -Style Heading2 "DFS Namespaces" {
                 
-                # Check to se if DFS module is working
+                # Check to see if DFS module is working
                 Try{
 
-                    $DFSnRoots = Get-DfsnRoot -domain $Domain
+                    $DFSnRoots = Get-DfsnRoot -domain $Domain -ErrorAction Stop
 
                     ForEach($DFSnRoot in $DFSnRoots){
     
