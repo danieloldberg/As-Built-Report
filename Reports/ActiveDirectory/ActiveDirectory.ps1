@@ -152,13 +152,13 @@ foreach ($Forest in $Target) {
 
             Section -Style Heading2 "Password Policies" {
                 
-                
+                # Get-ADDefaultDomainPasswordPolicy
 
             }
 
             Section -Style Heading2 "Fine Grained Password Policies" {
                 
-                
+                # Get-ADFineGrainedPasswordPolicy
 
             }
 
