@@ -355,13 +355,13 @@ foreach ($Forest in $Target) {
                         
                         ForEach($DFSnFolder in $DFSnFolders){
                     
-                            $DFSnFolder | Table -Name "$DFSnRoot DFSn Folder"
+                            $DFSnFolder | Table -Name "$DFSnRoot DFSn Folder" -ErrorAction SilentlyContinue
                     
                             $DFSnFolderTargets = Get-DfsnFolderTarget -Path $DFSnFolder.Path
                     
                             ForEach($DFSnFolderTarget in $DFSnFolderTargets){
                     
-                                $DFSnFolderTarget | Table -Name "$DFSnFolder DFSn Folder Targets"
+                                $DFSnFolderTarget | Table -Name "$DFSnFolder DFSn Folder Targets" -ErrorAction SilentlyContinue
                     
                             }
                     
