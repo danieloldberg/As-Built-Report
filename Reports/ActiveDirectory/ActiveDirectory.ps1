@@ -340,7 +340,7 @@ foreach ($Forest in $Target) {
             Section -Style Heading2 "DFS Namespaces" {
                 
                 # Check to see if DFS module is working
-                Try{
+                #Try{
 
                     $DFSnRoots = Get-DfsnRoot -domain $Domain -ErrorAction Stop
 
@@ -366,7 +366,7 @@ foreach ($Forest in $Target) {
                         
                     }
 
-                }
+                <#}
                 Catch [Microsoft.Management.Infrastructure.CimException]{
                     Write-Verbose "Unable to collect DFS information for $domain. This is probably due to not DFSn module not installed or client not being inside the same domain."
                     Paragraph "Unable to collect DFS information for $domain. This is probably due to not DFSn module not installed or client not being inside the same domain." -Color Red
@@ -376,7 +376,7 @@ foreach ($Forest in $Target) {
                     Write-Verbose "Övrgt"
                     Paragraph "Övrigt" -Color Red
                     Return
-                }
+                }#>
              
             }
 
