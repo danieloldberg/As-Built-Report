@@ -219,8 +219,8 @@ foreach ($Forest in $Target) {
                         ForEach($DnsZone in $DCDnsZones){
 
                             Section -Style Heading3 ($DomainDC.Name + "\" + $DnsZone.ZoneName) {
-                                <#$DCDnsZone | Select-Object ZoneType,DynamicUpdate,ReplicationScope,IsDsIntegrated,IsReadOnly,IsReverseLookupZone,SecureSecondaries,MasterServers |
-                                Table -Name ($DomainDC.Name + "\" + $DCDnsZone.ZoneName) -List#>
+                                $DCDnsZone | Select-Object ZoneType,DynamicUpdate,ReplicationScope,IsDsIntegrated,IsReadOnly,IsReverseLookupZone,SecureSecondaries,MasterServers |
+                                Table -Name ($DomainDC.Name + "\" + $DCDnsZone.ZoneName) -List
 
                                 Get-DnsServerResourceRecord -ComputerName $DomainDC.HostName -ZoneName $DnsZone.ZoneName -ErrorAction Stop |
                                 Select-Object HostName,RecordType,RecordData,TimeToLive,Timestamp |
@@ -343,11 +343,6 @@ foreach ($Forest in $Target) {
                     $DFSnRoots = Get-DfsnRoot -domain $Domain -ErrorAction Stop
 
                     ForEach($DFSnRoot in $DFSnRoots){
-    
-                        
-                        If($DFSRoot.Flags -like "*AccessBased Enumeration*"){
-                            $DFSRoot = Add-Member -InputObject $DFSRoot -MemberType NoteProperty -Name "AccessBased Enumeration" -Value "True" -PassThru
-                        }
                     
                         Section -Style Heading3 $DFSnRoot.Path
                     
@@ -370,12 +365,15 @@ foreach ($Forest in $Target) {
                     }
 
                 }
-                Catch{
-
+                Catch [Microsoft.Management.Infrastructure.CimException]{
                     Write-Verbose "Unable to collect DFS information for $domain. This is probably due to not DFSn module not installed or client not being inside the same domain."
                     Paragraph "Unable to collect DFS information for $domain. This is probably due to not DFSn module not installed or client not being inside the same domain." -Color Red
                     Return
-
+                }
+                Catch{
+                    Write-Verbose "Övrgt"
+                    Paragraph "Övrigt" -Color Red
+                    Return
                 }
              
             }
