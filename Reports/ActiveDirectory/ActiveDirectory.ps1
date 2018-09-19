@@ -320,18 +320,18 @@ foreach ($Forest in $Target) {
                         
                     }
                     $DomainDriveMaps | Select-Object DrivePath,DriveAction,DriveLetter,DriveLabel,DrivePersistent,GPOName |
-                        Table -Name "$Domain Drive Maps"
+                        Table -Name "$Domain Drive Maps" -ErrorAction SilentlyContinue
                 }
-                Catch[System.UnauthorizedAccessException]{
+                Catch{
                     Write-Verbose "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain"
                     Paragraph "Unable to collect GPO information for $domain. This is probably due to missing permissions or client machine in another domain" -Color Red
                     Return
                 }
-                Catch{
+                <#Catch{
                     Write-Verbose "No Drive Maps for $domain are pushed out."
                     Paragraph "No Drive Maps for $domain are pushed out."
                     Return
-                }
+                }#>
                 
             }
             
