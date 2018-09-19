@@ -1,4 +1,4 @@
-#requires -Modules @{ModuleName="PScribo";ModuleVersion="0.7.24"},ActiveDirectory,GroupPolicy,dfsn
+#requires -Modules @{ModuleName="PScribo";ModuleVersion="0.7.24"},ActiveDirectory,GroupPolicy,dfsn,DnsServer
 
 <#
 .SYNOPSIS  
