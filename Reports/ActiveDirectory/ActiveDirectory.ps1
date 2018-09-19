@@ -220,7 +220,9 @@ foreach ($Forest in $Target) {
 
                             Section -Style Heading3 ($DomainDC.Name + "\" + $DnsZone.ZoneName) {
                                 $DnsZone | Select-Object ZoneType,DynamicUpdate,ReplicationScope,IsDsIntegrated,IsReadOnly,IsReverseLookupZone,SecureSecondaries,MasterServers |
-                                Table -Name ($DomainDC.Name + "\" + $DnsZone.ZoneName) -List -ErrorAction SilentlyContinue
+                                Table -Name ($DomainDC.Name + "\" + $DnsZone.ZoneName) -ErrorAction SilentlyContinue
+
+                                LineBreak
 
                                 Get-DnsServerResourceRecord -ComputerName $DomainDC.HostName -ZoneName $DnsZone.ZoneName -ErrorAction Stop |
                                 Select-Object HostName,RecordType,RecordData,TimeToLive,Timestamp |
