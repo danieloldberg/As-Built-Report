@@ -97,7 +97,7 @@ foreach ($Forest in $Target) {
                         UPNSuffix = $UPNSuffix
                     }
                 }
-                $UPNSuffixObject | Table -Name "Forest UPN suffixes"
+                $UPNSuffixObject | Table -Name "Forest UPN suffixes" -ErrorAction SilentlyContinue
 
             }
 
@@ -114,13 +114,13 @@ foreach ($Forest in $Target) {
     Section -Style Heading1 "Forest Subnets" {
         Get-ADReplicationSubnet -Credential $Credentials -Filter * -Server $Forest -Properties * |
             Select-Object Name,Description,Created,Modified |
-            Table -Name "Forest Subnets"
+            Table -Name "Forest Subnets" -ErrorAction SilentlyContinue
     }
 
     Section -Style Heading1 "Forest Site Links" {
         Get-ADReplicationSiteLink -Credential $Credentials -Filter * -Server $Forest -Properties * |
             Select-Object Name,Cost,@{Name="Replication Frequency in Minutes";Expression={$_."ReplicationFrequencyInMinutes"}},ReplInterval,Created,Modified,@{Name="Protected";Expression={$_."ProtectedFromAccidentalDeletion"}} |
-            Table -Name "Forest Site Links"
+            Table -Name "Forest Site Links" -ErrorAction SilentlyContinue
     }
 
     # Loop all domains in forest 
@@ -146,7 +146,7 @@ foreach ($Forest in $Target) {
                         UPNSuffix = $UPNSuffix
                     }
                 }
-                $UPNSuffixObject | Table -Name "Domain UPN suffixes"
+                $UPNSuffixObject | Table -Name "Domain UPN suffixes" -ErrorAction SilentlyContinue
             }
 
             Section -Style Heading2 "FSMO Servers" {
