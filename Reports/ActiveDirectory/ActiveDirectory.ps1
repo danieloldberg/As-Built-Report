@@ -213,7 +213,7 @@ foreach ($Forest in $Target) {
                 $DomainDCs = Get-ADGroupMember 'Domain Controllers' -Credential $Credentials -Server $Domain | Get-ADDomainController
                 #Try{
                     ForEach($DomainDC in $DomainDCs){
-                        Paragraph $DomainDC.Hostname
+
                         $DCDnsZones = Get-DnsServerZone -ComputerName $DomainDC.HostName -ErrorAction Stop
 
                         ForEach($DnsZone in $DCDnsZones){
@@ -303,7 +303,7 @@ foreach ($Forest in $Target) {
         
                         if (Test-Path "\\$($GPODom)\SYSVOL\$($GPODom)\Policies\{$($GPOID)}\User\Preferences\Drives\Drives.xml")
                         {
-                            [xml]$DriveXML = Get-Content "\\$($GPODom)\SYSVOL\$($GPODom)\Policies\{$($GPOID)}\User\Preferences\Drives\Drives.xml"
+                            [xml]$DriveXML = Get-Content "\\$($GPODom)\SYSVOL\$($GPODom)\Policies\{$($GPOID)}\User\Preferences\Drives\Drives.xml" -ErrorAction SilentlyContinue
         
                             foreach ( $drivemap in $DriveXML.Drives.Drive ){
                                 $DomainDriveMaps += New-Object PSObject -Property @{
