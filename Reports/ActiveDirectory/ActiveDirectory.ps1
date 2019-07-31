@@ -344,24 +344,38 @@ foreach ($Forest in $Target) {
 
                     $DFSnRoots = Get-DfsnRoot -domain $Domain -ErrorAction Stop
 
+                    $DFSnRoots | Table -Name "$Domain DFSn Roots" -ErrorAction SilentlyContinue
+
+                    LineBreak
+
                     ForEach($DFSnRoot in $DFSnRoots){
                     
-                        Section -Style Heading3 $DFSnRoot.Path
-                    
-                        $DFSnFolders = Get-DfsnFolder -Path ($($DFSnRoot.Path) + "\*")
+                        Section -Style Heading3 $DFSnRoot.Path {
                         
-                        ForEach($DFSnFolder in $DFSnFolders){
-                    
-                            $DFSnFolder | Table -Name "$DFSnRoot DFSn Folder" -ErrorAction SilentlyContinue
-                    
-                            $DFSnFolderTargets = Get-DfsnFolderTarget -Path $DFSnFolder.Path
-                    
-                            ForEach($DFSnFolderTarget in $DFSnFolderTargets){
-                    
-                                $DFSnFolderTarget | Table -Name "$DFSnFolder DFSn Folder Targets" -ErrorAction SilentlyContinue
-                    
+                            $DFSnFolders = Get-DfsnFolder -Path ($($DFSnRoot.Path) + "\*")
+                            
+                            ForEach($DFSnFolder in $DFSnFolders){
+                        
+                                <#$DFSnFolder |
+                                Select-Object Path,TimeToLiveSec,Description,NamespacePath,TimeToLive,State |
+                                Table -Name "$DFSnRoot DFSn Folder" -ErrorAction SilentlyContinue#>
+                        
+                                $DFSnFolderTargets = Get-DfsnFolderTarget -Path $DFSnFolder.Path
+                        
+                                #ForEach($DFSnFolderTarget in $DFSnFolderTargets){
+
+                                    #LineBreak
+                        
+                                    <#$DFSnFolderTarget |
+                                    Select-Object Path,ReferralPriorityRank,TargetPath,ReferralPriorityClass,State |
+                                    Table -Name "$DFSnFolder DFSn Folder Targets" -ErrorAction SilentlyContinue#>
+                        
+                                    $DFSnFolderTargets | Select-Object Path,ReferralPriorityRank,TargetPath,ReferralPriorityClass,State |
+                                    Table -Name "$DFSnFolder DFSn Folder Targets" -ErrorAction SilentlyContinue
+                                #}
+                        
                             }
-                    
+
                         }
                         
                     }

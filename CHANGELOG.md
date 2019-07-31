@@ -1,5 +1,16 @@
 # New-AsBuiltReport Changelog
 
+## [Unreleased]
+### Changed
+- Add "-Raw" paramter to get-content when importing report JSON data to fix a known issue
+
+## 0.2.1
+### What's New
+- Added parameter validation to `Type` parameter
+- Fixed `Target` parameter to accept multiple IP/FQDN
+- Fixed issues with CWD paths
+- Updated default JSON configuration filename to align with documentation
+
 ## 0.2.0
 ### What's New
 - New As-Built JSON configuration structure
